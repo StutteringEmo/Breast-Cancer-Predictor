@@ -8,6 +8,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -17,24 +18,31 @@ jobs:
       with:
         python-version: "3.11"
 
-    - name: Install deps
+    - name: Install deps (smoke test only)
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-
-    - name: Smoke check artifacts
-      run: |
         python - << 'PY'
-        import os, json
-        assert os.path.exists("app/model.pkl"), "Missing app/model.pkl. Run the training cells and commit artifacts."
-        assert os.path.exists("app/schema.json"), "Missing app/schema.json."
+        import os
+        assert os.path.exists("app/model.pkl"), "Missing app/model.pkl"
+        assert os.path.exists("app/schema.json"), "Missing app/schema.json"
         print("Artifacts present.")
         PY
 
-    - name: Deploy to Heroku
-      uses: akhileshns/heroku-deploy@v3.12.12
+    # NEW: Install Heroku CLI and authenticate
+    - name: Install Heroku CLI
+      uses: heroku/actions/setup@v2
       with:
-        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-        heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
-        heroku_email: ${{ secrets.HEROKU_EMAIL }}
-        usedocker: false
+        heroku-api-key: ${{ secrets.HEROKU_API_KEY }}
+
+    - name: Set Heroku git remote
+      run: |
+        heroku git:remote -a ${{ secrets.HEROKU_APP_NAME }}
+
+    - name: Deploy (git push to Heroku)
+      env:
+        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git push heroku HEAD:main -f
