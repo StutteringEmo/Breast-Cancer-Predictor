@@ -29,34 +29,29 @@ jobs:
         print("Artifacts present.")
         PY
 
-    # Install Heroku CLI (official install script)
-    - name: Install Heroku CLI
-      run: |
-        curl https://cli-assets.heroku.com/install.sh | sh
-
-    # Authenticate Heroku by writing ~/.netrc using your repo secrets
-    - name: Heroku auth
+    - name: Validate secrets
       env:
-        HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
         HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
       run: |
-        cat > ~/.netrc <<EOF
-        machine api.heroku.com
-          login $HEROKU_EMAIL
-          password $HEROKU_API_KEY
-        machine git.heroku.com
-          login $HEROKU_EMAIL
-          password $HEROKU_API_KEY
-        EOF
-        chmod 600 ~/.netrc
-        heroku auth:whoami
+        [ -n "$HEROKU_API_KEY" ] || (echo "HEROKU_API_KEY is not set" && exit 1)
+        [ -n "$HEROKU_APP_NAME" ] || (echo "HEROKU_APP_NAME is not set" && exit 1)
 
-    - name: Set Heroku git remote
-      run: |
-        heroku git:remote -a ${{ secrets.HEROKU_APP_NAME }}
-
+    # Deploy without Heroku CLI: push directly to Heroku git remote with API key
     - name: Deploy (git push to Heroku)
+      env:
+        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
+        git remote add heroku "https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP_NAME.git"
         git push heroku HEAD:main -f
+
+    # Optional: simple health check
+    - name: Ping app
+      env:
+        HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+      run: |
+        sleep 10
+        curl -sSf "https://$HEROKU_APP_NAME.herokuapp.com/" > /dev/null
