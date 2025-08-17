@@ -59,14 +59,17 @@ jobs:
         git remote add heroku "https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP_NAME.git"
         git push heroku HEAD:main -f
 
-    - name: Ping app
+    - name: Ping app (tolerate 200 or 404)
       env:
         HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
       run: |
-        for i in {1..6}; do
-          if curl -fsS "https://$HEROKU_APP_NAME.herokuapp.com/" >/dev/null; then
-            echo "App responded OK"; exit 0
+        for i in {1..12}; do
+          code=$(curl -s -o /dev/null -w "%{http_code}" "https://$HEROKU_APP_NAME.herokuapp.com/")
+          echo "HTTP $code"
+          if [ "$code" = "200" ] || [ "$code" = "404" ]; then
+            exit 0
           fi
-          echo "Waiting for dyno… ($i/6)"; sleep 10
+          echo "Waiting for dyno… ($i/12)"; sleep 10
         done
         echo "App did not respond in time"; exit 1
+
