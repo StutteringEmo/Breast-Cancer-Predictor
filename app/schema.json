@@ -1,0 +1,20 @@
+{
+  "feature_order": [
+    "Clump_thickness",
+    "Uniformity_of_cell_size",
+    "Uniformity_of_cell_shape",
+    "Marginal_adhesion",
+    "Single_epithelial_cell_size",
+    "Bare_nuclei",
+    "Bland_chromatin",
+    "Normal_nucleoli",
+    "Mitoses"
+  ],
+  "target_labels": {
+    "0": "benign",
+    "1": "malignant"
+  },
+  "selected_model": "log_reg",
+  "cv_accuracy": 0.969610682110682,
+  "test_accuracy": 0.95
+}

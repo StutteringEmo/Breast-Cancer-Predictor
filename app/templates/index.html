@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Breast Cancer Predictor</title>
+    <style>
+      body { font-family: system-ui, Arial, sans-serif; max-width: 760px; margin: 40px auto; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      input, button { padding: 10px; font-size: 1rem; width: 100%; box-sizing: border-box; }
+      button { cursor: pointer; }
+      label { font-size: .95rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Breast Cancer (Original) — Prediction</h1>
+    <p>Enter the nine cytological features (1–10 scale):</p>
+    <form method="POST" action="/predict">
+      <div class="grid">
+        {% for f in features %}
+          <label>
+            {{ f.replace('_',' ').title() }}<br/>
+            <input name="{{ f }}" type="number" min="1" max="10" step="1" required>
+          </label>
+        {% endfor %}
+      </div>
+      <p><button type="submit">Predict</button></p>
+    </form>
+  </body>
+</html>
