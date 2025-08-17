@@ -9,20 +9,20 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-    # --- SINGLE checkout, full history ---
+    # Single checkout, full history (Heroku rejects shallow pushes)
     - name: Checkout full history
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    # sanity: if somehow shallow, unshallow it
     - name: Ensure repo is not shallow
       run: |
-        if git rev-parse --is-shallow-repository; then
+        if git rev-parse --is-shallow-repository | grep -q true; then
+          echo "Repo is shallow; unshallowing…"
           git fetch --prune --unshallow
+        else
+          echo "Repo already a full clone."
         fi
-        git rev-parse --is-shallow-repository || true
-        git log --oneline -n 3 || true
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -55,15 +55,18 @@ jobs:
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        # add or reset the heroku remote
         git remote remove heroku 2>/dev/null || true
         git remote add heroku "https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP_NAME.git"
-        # push with full history (now allowed)
         git push heroku HEAD:main -f
 
     - name: Ping app
       env:
         HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
       run: |
-        sleep 10
-        curl -sSf "https://$HEROKU_APP_NAME.herokuapp.com/" > /dev/null
+        for i in {1..6}; do
+          if curl -fsS "https://$HEROKU_APP_NAME.herokuapp.com/" >/dev/null; then
+            echo "App responded OK"; exit 0
+          fi
+          echo "Waiting for dyno… ($i/6)"; sleep 10
+        done
+        echo "App did not respond in time"; exit 1
