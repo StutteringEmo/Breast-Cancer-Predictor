@@ -18,7 +18,7 @@ jobs:
       with:
         python-version: "3.11"
 
-    - name: Install deps (smoke test only)
+    - name: Install deps + smoke check
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
@@ -29,19 +29,33 @@ jobs:
         print("Artifacts present.")
         PY
 
-    # NEW: Install Heroku CLI and authenticate
+    # Install Heroku CLI (official install script)
     - name: Install Heroku CLI
-      uses: heroku/actions/setup@v2
-      with:
-        heroku-api-key: ${{ secrets.HEROKU_API_KEY }}
+      run: |
+        curl https://cli-assets.heroku.com/install.sh | sh
+
+    # Authenticate Heroku by writing ~/.netrc using your repo secrets
+    - name: Heroku auth
+      env:
+        HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
+        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      run: |
+        cat > ~/.netrc <<EOF
+        machine api.heroku.com
+          login $HEROKU_EMAIL
+          password $HEROKU_API_KEY
+        machine git.heroku.com
+          login $HEROKU_EMAIL
+          password $HEROKU_API_KEY
+        EOF
+        chmod 600 ~/.netrc
+        heroku auth:whoami
 
     - name: Set Heroku git remote
       run: |
         heroku git:remote -a ${{ secrets.HEROKU_APP_NAME }}
 
     - name: Deploy (git push to Heroku)
-      env:
-        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
